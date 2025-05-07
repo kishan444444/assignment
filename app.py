@@ -22,7 +22,7 @@ DB_CONFIG = {
     'host': 'localhost',
     'port': 3306,
     'user': 'root',
-    'password': 'verms9425604852',
+    'password': 'your passward',
     'db': 'federal_data'
 }
 
