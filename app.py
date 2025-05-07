@@ -2,9 +2,11 @@ import aiohttp
 import asyncio
 import aiomysql
 import sqlite3
-import pymysql
-import nest_asyncio
 import logging
+import os
+from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from datetime import datetime
 from urllib.parse import urljoin
 from bs4 import BeautifulSoup
@@ -14,7 +16,6 @@ from langchain.agents import create_sql_agent
 from langchain.agents.agent_types import AgentType
 from langchain.sql_database import SQLDatabase
 from langchain.agents import AgentExecutor
-from fastapi import FastAPI
 import uvicorn
 
 # ---- Configuration Constants ----
@@ -22,12 +23,12 @@ DB_CONFIG = {
     'host': 'localhost',
     'port': 3306,
     'user': 'root',
-    'password': 'your passward',
+    'password': 'your_password',
     'db': 'federal_data'
 }
 
 SQLITE_DB_PATH = 'federal_data.db'
-GROQ_API_KEY = "YOUR API KEY"
+GROQ_API_KEY = "YOUR_API_KEY"
 LLAMA_MODEL_NAME = "Llama3-8b-8192"
 
 # ---- Logger Setup ----
@@ -38,9 +39,7 @@ logger = logging.getLogger(__name__)
 app = FastAPI()
 
 # ---- Database Utility Functions ----
-
 async def get_mysql_connection():
-    """Create and return an async MySQL connection."""
     try:
         return await aiomysql.connect(**DB_CONFIG)
     except Exception as e:
@@ -48,7 +47,6 @@ async def get_mysql_connection():
         raise
 
 async def save_to_mysql(docs):
-    """Save fetched documents to MySQL."""
     conn = await get_mysql_connection()
     async with conn.cursor() as cur:
         for doc in docs:
@@ -57,7 +55,6 @@ async def save_to_mysql(docs):
                 published_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 company_name = "Company not available"
                 
-                # Prepare and execute insert query
                 await cur.execute(""" 
                     INSERT INTO documents (title, url, summary, published_date, company_name)
                     VALUES (%s, %s, %s, %s, %s)
@@ -74,9 +71,7 @@ async def save_to_mysql(docs):
         conn.close()
 
 # ---- Web Scraping Utility Functions ----
-
 async def fetch_documents(topic="OpenAI", max_articles=10):
-    """Fetch top news articles related to a given topic from Bing News."""
     search_url = f"https://www.bing.com/news/search?q={topic.replace(' ', '+')}"
     headers = {"User-Agent": "Mozilla/5.0"}
 
@@ -92,12 +87,7 @@ async def fetch_documents(topic="OpenAI", max_articles=10):
                     url = urljoin(base_url, link["href"])
                     title = link.get_text(strip=True)
 
-                    if (
-                        url.startswith("http")
-                        and "bing.com" not in url
-                        and title
-                        and len(title) > 15
-                    ):
+                    if url.startswith("http") and "bing.com" not in url and title and len(title) > 15:
                         articles.append({"title": title, "url": url})
 
                     if len(articles) >= max_articles:
@@ -109,16 +99,13 @@ async def fetch_documents(topic="OpenAI", max_articles=10):
         return []
 
 # ---- LangChain Agent Setup ----
-
 def setup_langchain_agent():
-    """Set up the LangChain agent with SQLite database and Groq model."""
     sqlite_connection = sqlite3.connect(SQLITE_DB_PATH)
     db = SQLDatabase.from_uri(f"sqlite:///{SQLITE_DB_PATH}")
 
     llm = ChatGroq(groq_api_key=GROQ_API_KEY, model_name=LLAMA_MODEL_NAME, streaming=True)
     toolkit = SQLDatabaseToolkit(db=db, llm=llm)
 
-    # Create the agent and the AgentExecutor
     agent = create_sql_agent(
         llm=llm,
         toolkit=toolkit,
@@ -130,11 +117,16 @@ def setup_langchain_agent():
 
     return agent_executor
 
-# ---- FastAPI Endpoint to Trigger Pipeline ----
+# FastAPI Endpoint to serve the HTML page
+@app.get("/", response_class=HTMLResponse)
+async def serve_html():
+    html_path = os.path.join(os.getcwd(), "index.html")  # Path to your HTML file
+    with open(html_path, "r") as file:
+        return file.read()
 
+# FastAPI Endpoint to trigger the pipeline
 @app.post("/run-pipeline")
 async def run_pipeline():
-    """Endpoint to trigger the main pipeline to fetch, save, and process documents."""
     logger.info("🚀 Starting pipeline...")
     docs = await fetch_documents()
     if docs:
@@ -144,16 +136,15 @@ async def run_pipeline():
         # Set up the agent and run query
         agent_executor = setup_langchain_agent()
         query = "give me list of all documents in table"
-        response = await agent_executor.arun(query)  # Ensure async execution
+        response = await agent_executor.arun(query)
         logger.info(f"Agent Response: {response}")
         return {"status": "success", "message": f"Agent Response: {response}"}
     else:
         logger.warning("No documents fetched. Skipping further processing.")
         return {"status": "failure", "message": "No documents fetched."}
 
-# ---- FastAPI Server Execution ----
-nest_asyncio.apply()
-
+# Running FastAPI
 if __name__ == "__main__":
-    
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
+

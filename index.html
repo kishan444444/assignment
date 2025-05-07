@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pipeline Trigger</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            width: 60%;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #fff;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            margin-top: 50px;
+            text-align: center;
+        }
+        h1 {
+            color: #333;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #statusMessage {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border: 1px solid #ccc;
+            display: none;
+        }
+        .success {
+            background-color: #e7f7e7;
+            color: #4CAF50;
+        }
+        .failure {
+            background-color: #f8d7da;
+            color: #e53935;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Trigger the Pipeline</h1>
+    <button id="triggerButton">Run Pipeline</button>
+    <div id="statusMessage"></div>
+</div>
+
+<script>
+    document.getElementById('triggerButton').addEventListener('click', async function() {
+        const statusMessage = document.getElementById('statusMessage');
+        
+        // Show loading message
+        statusMessage.textContent = 'Running the pipeline... Please wait.';
+        statusMessage.className = '';
+        statusMessage.style.display = 'block';
+
+        try {
+            // Trigger the pipeline via FastAPI
+            const response = await fetch('http://localhost:8000/run-pipeline', {
+                method: 'POST',
+            });
+            
+            const result = await response.json();
+            
+            // Display result
+            if (response.ok) {
+                statusMessage.textContent = `Success: ${result.message}`;
+                statusMessage.classList.add('success');
+            } else {
+                statusMessage.textContent = `Failure: ${result.message}`;
+                statusMessage.classList.add('failure');
+            }
+        } catch (error) {
+            statusMessage.textContent = 'Error: Failed to trigger pipeline. Please try again later.';
+            statusMessage.classList.add('failure');
+        }
+    });
+</script>
+
+</body>
+</html>
