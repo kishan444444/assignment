@@ -1,43 +1,45 @@
-📰 News Ingestion & SQL Query Pipeline (FastAPI + LangChain + Groq)
-This project fetches real-time news articles from Bing News, stores them in a MySQL database, and allows you to query them using natural language through a LangChain agent powered by Groq's LLaMA3 model — all wrapped in a FastAPI web service.
+# 📰 News Data Pipeline with LLM-Powered SQL Agent
 
-🚀 Features
-✅ Asynchronously scrapes top news related to a given topic.
+This project fetches the latest news articles related to a topic (default: **OpenAI**) from Bing News, stores the data in a MySQL database, and uses a LangChain + Groq LLM agent to query a local SQLite database. It is deployed as a FastAPI service.
 
-✅ Stores article metadata into MySQL (documents table).
+## 🚀 Features
 
-✅ Uses LangChain + Groq LLaMA3 to allow natural language querying of the news.
+- 🔍 **Web Scraping**: Retrieves top news articles using `aiohttp` and `BeautifulSoup` from Bing News.
+- 💾 **Async MySQL Storage**: Stores scraped article metadata in a MySQL database via `aiomysql`.
+- 🤖 **LangChain Agent**: Uses `ChatGroq` LLM to interact with a SQL database using natural language queries.
+- ⚡ **FastAPI API**: RESTful endpoints to run the pipeline and interact with the agent.
 
-✅ Exposes everything via a FastAPI POST API endpoint.
+## 🏗️ Tech Stack
 
-✅ SQLite is used as the SQLDatabase for LangChain agent context (customizable).
+- **Python 3.10+**
+- **FastAPI**
+- **aiohttp** / **aiomysql**
+- **BeautifulSoup**
+- **LangChain + Groq (LLaMA3-8B-8192)**
+- **MySQL + SQLite**
 
-📦 Requirements
-Install all required dependencies:
+---
 
+## 📦 Setup Instructions
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/yourusername/news-llm-pipeline.git
+cd news-llm-pipeline
+2. Create & Activate Virtual Environment
 bash
 Copy
 Edit
-pip install fastapi uvicorn aiohttp aiomysql pymysql sqlite3 nest_asyncio beautifulsoup4 langchain langchain_groq
-🛠 Configuration
-Make sure your MySQL server is running and the documents table exists in a federal_data database:
-
-sql
+python -m venv venv
+source venv/bin/activate  # or venv\Scripts\activate on Windows
+3. Install Requirements
+bash
 Copy
 Edit
-CREATE DATABASE IF NOT EXISTS federal_data;
-
-USE federal_data;
-
-CREATE TABLE IF NOT EXISTS documents (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    title TEXT,
-    url TEXT,
-    summary TEXT,
-    published_date DATETIME,
-    company_name TEXT
-);
-Update the credentials and file paths in the script:
+pip install -r requirements.txt
+4. Configure Environment
+Update database credentials and Groq API key in the main.py or config.py file:
 
 python
 Copy
@@ -50,50 +52,43 @@ DB_CONFIG = {
     'db': 'federal_data'
 }
 
-SQLITE_DB_PATH = 'federal_data.db'
 GROQ_API_KEY = "your_groq_api_key"
-LLAMA_MODEL_NAME = "Llama3-8b-8192"
-🧠 How It Works
-When /run-pipeline endpoint is triggered, it:
-
-Scrapes Bing News for the topic (default: "OpenAI").
-
-Saves article titles and URLs into the MySQL documents table.
-
-Runs a SQL agent query ("give me list of all documents in table") using LangChain with Groq model.
-
-📡 API Usage
-Run the Server
+5. Run FastAPI Server
 bash
 Copy
 Edit
 uvicorn main:app --reload
-Trigger the Pipeline
-bash
+🔧 API Endpoints
+GET /run-pipeline
+Triggers the news fetch and database insertion pipeline.
+
+Returns a success message with number of articles stored.
+
+GET /query-agent?question=...
+Accepts a natural language SQL query.
+
+Returns the LLM-generated answer from the SQLite database.
+
+🧪 Example Usage
+http
 Copy
 Edit
-curl -X POST http://localhost:8000/run-pipeline
-Response
-json
+GET /run-pipeline
+http
 Copy
 Edit
-{
-  "status": "success",
-  "message": "Agent Response: ..."
-}
+GET /query-agent?question=List all documents in the table.
 📁 Project Structure
-bash
+graphql
 Copy
 Edit
-main.py          # FastAPI app and pipeline logic
-federal_data.db  # SQLite DB used by LangChain (optional)
-README.md
-📋 TODO / Improvements
-Add ability to change topic via API query param.
+.
+├── main.py            # FastAPI app with endpoints
+├── db_utils.py        # Async MySQL utilities
+├── scraper.py         # News scraping logic
+├── agent.py           # LangChain + Groq agent setup
+├── federal_data.db    # SQLite DB used by agent
+├── requirements.txt
+└── README.md
 
-Add full-text search or keyword filtering.
-
-Add user-facing front-end dashboard.
-
-Replace SQLite with MySQL in LangChain if needed.
 
