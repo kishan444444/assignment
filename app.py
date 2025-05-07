@@ -27,7 +27,7 @@ DB_CONFIG = {
 }
 
 SQLITE_DB_PATH = 'federal_data.db'
-GROQ_API_KEY = "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"
+GROQ_API_KEY = "YOUR API KEY"
 LLAMA_MODEL_NAME = "Llama3-8b-8192"
 
 # ---- Logger Setup ----
